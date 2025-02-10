@@ -9,9 +9,7 @@ import os
 class LinkExtractorSpider(scrapy.Spider):
     name = "link_extractor"
     
-    excluded_keywords = ["login", "signup", "register", "account", "password"]
-    
-    def __init__(self, start_url, all_data, *args, **kwargs):
+    def __init__(self, start_url, all_data, excluded_keywords, *args, **kwargs):
         super(LinkExtractorSpider, self).__init__(*args, **kwargs)
         self.start_urls = [start_url]
         self.allowed_domains = [start_url.split('//')[1].split('/')[0]]
@@ -19,6 +17,7 @@ class LinkExtractorSpider(scrapy.Spider):
         self.depth1_urls = set()
         self.depth2_urls = {}
         self.all_data = all_data  # List to store all results
+        self.excluded_keywords = excluded_keywords
 
     def should_exclude(self, url):
         return any(keyword in url.lower() for keyword in self.excluded_keywords)
@@ -54,7 +53,14 @@ class LinkExtractorSpider(scrapy.Spider):
                 self.all_data.append([self.base_url, depth1_url, depth2_url, "2"])
 
 # Function to run the spider for each URL from CSV
-def run_spider_from_csv(input_csv, output_path):
+
+def load_excluded_keywords(file_path="excluded_keywords.txt"):
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            return [line.strip().lower() for line in file.readlines() if line.strip()]
+    return []
+
+def run_spider_from_csv(input_csv, output_path, excluded_keywords):
     urls = pd.read_csv(input_csv)["URL"].tolist()  # Assuming CSV has a column 'URL'
     
     all_data = []  # List to store data from all URLs
@@ -65,7 +71,7 @@ def run_spider_from_csv(input_csv, output_path):
     
     # Create a job for each URL
     for url in urls:
-        process.crawl(LinkExtractorSpider, start_url=url, all_data=all_data)
+        process.crawl(LinkExtractorSpider, start_url=url, all_data=all_data, excluded_keywords=excluded_keywords)
     
     process.start()
     
@@ -86,10 +92,13 @@ def main():
         with open(input_csv, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
+        # Load excluded keywords from file
+        excluded_keywords = load_excluded_keywords()
+        
         # Show a progress bar or spinner while the spider runs
         with st.spinner('Running the scraper... Please wait'):
             output_path = "combined_extracted_urls.xlsx"
-            process = Process(target=run_spider_from_csv, args=(input_csv, output_path))
+            process = Process(target=run_spider_from_csv, args=(input_csv, output_path, excluded_keywords))
             process.start()
             process.join()  # Wait for the process to finish
             
