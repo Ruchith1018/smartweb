@@ -34,12 +34,12 @@ def main():
     if (st.session_state.option == "Single URL" and single_url) or (st.session_state.option == "Bulk CSV Upload" and uploaded_file):
         if st.button("Start Scraping"):
             excluded_keywords = load_excluded_keywords()
-            output_path = "data/output.xlsx"
+            output_path = "output.xlsx"
 
             with st.spinner('Running the scraper... Please wait'):
                 if st.session_state.option == "Bulk CSV Upload":
                     # Save the uploaded CSV
-                    input_csv = "data/input.csv"
+                    input_csv = "input.csv"
                     with open(input_csv, "wb") as f:
                         f.write(uploaded_file.getbuffer())
 
