@@ -1,7 +1,6 @@
 import pandas as pd
 from scrapy.crawler import CrawlerProcess
 import scrapy
-from text_extractor import extract_meaningful_text  # Import the function
 
 class LinkExtractorSpider(scrapy.Spider):
     name = "link_extractor"
@@ -21,7 +20,7 @@ class LinkExtractorSpider(scrapy.Spider):
         return any(keyword in url.lower() for keyword in self.excluded_keywords)
 
     def parse(self, response):
-        self.page_texts[response.url] = extract_meaningful_text(response)  # Use the imported function
+        self.page_texts[response.url] = self.extract_meaningful_text(response)
         
         for link in response.css("a::attr(href)").getall():
             absolute_url = response.urljoin(link)
@@ -34,7 +33,7 @@ class LinkExtractorSpider(scrapy.Spider):
     
     def parse_depth2(self, response):
         depth1_url = response.meta['depth1_url']
-        self.page_texts[response.url] = extract_meaningful_text(response)  # Use the imported function
+        self.page_texts[response.url] = self.extract_meaningful_text(response)
         
         if depth1_url not in self.depth2_urls:
             self.depth2_urls[depth1_url] = set()
@@ -44,6 +43,15 @@ class LinkExtractorSpider(scrapy.Spider):
             if absolute_url.startswith(depth1_url) and absolute_url != depth1_url:
                 if not self.should_exclude(absolute_url):
                     self.depth2_urls[depth1_url].add(absolute_url)
+    
+    def extract_meaningful_text(self, response):
+        """Extracts meaningful text from <p>, <div>, and header tags, ignoring unnecessary elements."""
+        texts = response.xpath("//p//text() | //div[not(@class) and not(@id)]//text() | //h1//text() | //h2//text() | //h3//text()").getall()
+        
+        # Clean text and filter out short fragments
+        cleaned_text = " ".join(text.strip() for text in texts if len(text.strip()) > 30)
+        
+        return cleaned_text[:2000]  # Limit to 2000 characters for readability
 
     def closed(self, reason):
         for depth1_url in self.depth1_urls:
@@ -54,7 +62,6 @@ class LinkExtractorSpider(scrapy.Spider):
             for depth2_url in depth2_list:
                 text_to_store = self.page_texts.get(depth2_url, "")
                 self.all_data.append([self.base_url, depth1_url, depth2_url, "2", text_to_store])
-
 
 def run_spider_from_csv(input_csv, output_path, excluded_keywords):
     urls = pd.read_csv(input_csv)["URL"].tolist()
