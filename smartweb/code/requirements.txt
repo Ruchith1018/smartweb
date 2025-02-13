@@ -4,4 +4,3 @@ scrapy
 openpyxl
 crochet
 google.generativeai
-beautifulsoup4
