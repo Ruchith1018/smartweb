@@ -3,3 +3,4 @@ pandas
 scrapy
 openpyxl
 crochet
+google.generativeai

@@ -1,7 +1,7 @@
 import pandas as pd
 from scrapy.crawler import CrawlerProcess
 import scrapy
-from text_extractor import extract_meaningful_text  # Import the function
+from text_extractor import TextExtractor  # Import the class
 
 class LinkExtractorSpider(scrapy.Spider):
     name = "link_extractor"
@@ -21,7 +21,8 @@ class LinkExtractorSpider(scrapy.Spider):
         return any(keyword in url.lower() for keyword in self.excluded_keywords)
 
     def parse(self, response):
-        self.page_texts[response.url] = extract_meaningful_text(response)  # Use the imported function
+        extractor = TextExtractor(response,"AIzaSyCCRbSDrJQM9uVT_7KlNgHlUcPKOcGka98")  # Instantiate the TextExtractor
+        self.page_texts[response.url] = extractor.extract_and_summarize()
         
         for link in response.css("a::attr(href)").getall():
             absolute_url = response.urljoin(link)
@@ -34,7 +35,8 @@ class LinkExtractorSpider(scrapy.Spider):
     
     def parse_depth2(self, response):
         depth1_url = response.meta['depth1_url']
-        self.page_texts[response.url] = extract_meaningful_text(response)  # Use the imported function
+        extractor = TextExtractor(response,"AIzaSyCCRbSDrJQM9uVT_7KlNgHlUcPKOcGka98")  # Instantiate the TextExtractor
+        self.page_texts[response.url] = extractor.extract_and_summarize()
         
         if depth1_url not in self.depth2_urls:
             self.depth2_urls[depth1_url] = set()
